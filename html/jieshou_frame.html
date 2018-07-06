@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <title>应用</title>
+    <link rel="stylesheet" type="text/css" href="../css/api.css" />
+    <link rel="stylesheet" type="text/css" href="../css/style.css" />
+    <link rel="stylesheet" type="text/css" href="../css/aui.2.0.css" />
+    <link rel="stylesheet" type="text/css" href="../css/aui.css" />
+    <link rel="stylesheet" type="text/css" href="../css/aui-skin.css" />
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <ul id="project_list" class="aui-list aui-media-list">
+        <!-- <li class="aui-list-item">
+        <div style="color:red;text-align:right">123</div>
+        <div class="aui-media-list-item-inner">
+          <div class="aui-list-item-inner">
+              <div class="aui-list-item-text">
+                <div class="aui-list-item-title">任务名称</div>
+                <div>123</div>
+              </div>
+              <div class="aui-list-item-text">
+                <div class="aui-list-item-title">下发日期</div>
+                <div>123</div>
+              </div>
+              <div class="aui-list-item-text">
+                <div class="aui-list-item-title">执行状态</div>
+                <div>123</div>
+              </div>
+              <div class="aui-btn aui-btn-info"  onclick="acceptTask('+i+')" style="float:right;margin-right:10px;">
+                <span class="aui-iconfont aui-icon-edit" ></span>接收</div>
+            </div>
+          </div>
+        </li> -->
+    </ul>
+<canvas id="mycanvas" style="display:none"></canvas>
+</body>
+<script type="text/javascript" src="../script/api.js"></script>
+<script type="text/javascript" src="../script/jquery-1.4.2.min.js"></script>
+<script type="text/javascript">
+    //json的获取需要设置为全局变量
+    var project_json = "";
+    var userName = $api.getStorage('account');
+    var maintenanceplan_id;
+    var project_id;
+    apiready = function() {
+      var array = api.pageParam.name;
+      if(array == undefined){
+        array == "12   3";
+      }else{
+        var index = array.indexOf('   ');
+        var string1 = array.substring(0, index);
+        var string2 = array.substring(index + 3);
+        maintenanceplan_id = string2;
+        project_id = string1;
+      }
+
+        getAllInfomation();
+    };
+
+    // function getId(){
+    //   var array = api.pageParam.name;
+    //   alert(array);
+    // }
+    function creatPage() {
+        // var data = eval(project_json);
+        // var data_info = data.message;
+        //alert(array);
+          $("#project_list").html("");
+        var information = project_json;
+        var obj = "";
+        for (var i = 0; i < information.length; i++) {
+            //使用information[i]来获取一个个的json对象
+            var differentobj = "";
+            obj = '<li class="aui-list-item">' +
+                '<div style="color:red;text-align:right;margin-right:10px;">' + information[i].type + '</div>' +
+                '<div class="aui-media-list-item-inner">' +
+                '<div class="aui-list-item-inner">' +
+                '<div class="aui-list-item-text">' +
+                '<div class="aui-list-item-title">任务名称</div>' +
+                '<div>' + information[i].task_name + '</div>' +
+                '</div>' +
+                '<div class="aui-list-item-text">' +
+                '<div class="aui-list-item-title">下发日期</div>' +
+                '<div>' + information[i].create_time + '</div>' +
+                '</div>' +
+                '<div class="aui-list-item-text">' +
+                '<div class="aui-list-item-title">执行状态</div>' +
+                '<div>' + information[i].status + '</div>' +
+                '</div>';
+            if (information[i].status == "待接收") {
+                differentobj = '<div class="aui-btn aui-btn-info"onclick="acceptTask(' + i + ')" style="float:right;margin-right:10px;">' +
+                    '<span class="aui-iconfont aui-icon-edit" ></span>接收</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</li>';
+            } else if(information[i].status == "执行中") {
+                differentobj = '<div class="aui-btn aui-btn-info"  onclick="executeTask(' + i + ')" style="float:right;margin-right:10px;">' +
+                    '<span class="aui-iconfont aui-icon-edit" ></span>执行</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</li>';
+            }else{
+              differentobj ='';
+            }
+            obj += differentobj;
+            $("#project_list").append(obj);
+        }
+    }
+
+    function executeTask(index) {
+        //执行任务的代码还没写，感觉跟接收任务差不多。
+
+        //alert(information[index].task_id);
+        opencamera(index);
+
+
+    }
+
+    function acceptTask(index) {
+        //下方是用来解析json的
+
+        var information = project_json;
+        // api.openWin({
+        //     name: 'acceptTask_win',
+        //     url: './acceptTask_win.html',
+        //     pageParam: {
+        //         "task_info":information[index]
+        //     }
+        // });
+        //向服务器发送修改任务状态（由待接收为执行中）重新载入页面
+        api.ajax({
+            url: $api.getStorage('connectUrl') + '/Maintenancer/TaskStatusOnExecute', //'http://192.168.0.7:8080/firefighting/Maintenancer/TaskStatusOnExecute',
+            method: 'post',
+            data: {
+                values: {
+                    userName: userName,
+                    task_id: information[index].task_id
+                }
+            }
+        }, function(ret, err) {
+            if (ret) {
+                getAllInfomation();
+            } else {
+                alert(err.message);
+            }
+        });
+
+
+    }
+
+    function getAllInfomation()
+    //函数用来获取json数据，并返回
+    {
+        // alert(userName);
+        // alert(maintenanceplan_id);
+        api.ajax({
+            url: $api.getStorage('connectUrl') + '/Maintenancer/CheckPlanTask',
+            // url: 'http://192.168.0.7:8080/firefighting/Maintenancer/CheckPlanTask',
+            method: 'post',
+            data: {
+                values: {
+                    userName: userName,
+                    maintenanceplan_id: maintenanceplan_id
+                }
+            }
+        }, function(ret, err) {
+            // alert(ret);
+            if (ret) {
+                var status = ret.status;
+                if (status == "true") {
+                    project_json = ret.message;
+                    creatPage();
+                    //alert(JSON.stringify( project_json));
+                } else {
+                    alert("数据获取失败，请重试");
+                }
+            } else {
+                alert("未能与服务器连接");
+                api.toast({
+                    msg: ret.message,
+                    duration: 2000,
+                    location: 'bottom'
+                });
+            }
+        });
+
+    }
+    var pictureurl;
+    var pictureid;
+    var picturetime;
+
+    function opencamera(index) {
+        api.getPicture({
+            sourceType: 'camera',
+            encodingType: 'jpg',
+            mediaValue: 'pic',
+            destinationType: 'url',
+            allowEdit: true,
+            quality: 10,
+            saveToPhotoAlbum: false
+        }, function(ret, err) {
+            if (ret) {
+              if(ret.data == ""){
+                alert("您取消了拍照");
+              }else{
+                  pictureurl = ret.data;
+                  var now = new Date();
+                  var year = now.getFullYear();
+                  var month = now.getMonth() + 1;
+                  var day = now.getDate();
+                  var hours = now.getHours();
+                  var minutes = now.getMinutes();
+                  var seconds = now.getSeconds();
+                  var tmp1 = now.toLocaleString();
+                  var tmp = year + "/" + month + "/" + day + "/" + hours + "/" + minutes + "/" + seconds;
+                  var timestamp = Date.parse(new Date());
+                  // $api.setStorage('picturetime',tmp1);
+                  picturetime = tmp1;
+                  // var jsfun = 'picture();';
+                  // api.execScript({
+                  //     frameName: 'testpicture',
+                  //     script: jsfun
+                  // });
+                  pictureid = timestamp;
+                  // $api.setStorage('pictureid',timestamp);
+                  api.showProgress({
+                      title: '图片存储中...',
+                      text: '先喝杯茶...',
+                      modal: false
+                  });
+                  picture(timestamp,index);
+              }
+            } else {
+              alert(JSON.stringify(err));
+            }
+        });
+    };
+
+    function picture(timestamp,index) {
+        // var pictureurl = $api.getStorage('pictureurl');
+        var imageFilter = api.require('imageFilter');
+        imageFilter.getAttr({
+            path: pictureurl
+        }, function(ret, err) {
+            if (ret.status) {
+                // var UILoading = api.require('UILoading');
+                // UILoading.flower({
+                //     center: {
+                //         x: 160,
+                //         y: 240
+                //     },
+                //     size: 30,
+                //     fixed: true
+                // }, function(ret) {
+                // });
+                var cav = document.getElementById('mycanvas');
+                cav.width = ret.width; //设置画布宽度
+                cav.height = ret.height;
+                ctx = cav.getContext('2d');
+                var img = new Image();
+                img.src = pictureurl;
+                // var tmp = $api.getStorage('picturetime');
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0); //将新new出的img对象放入；                          // 绘制水印
+                    ctx.font = "oblique small-caps bold 70px Arial"; //设置水印字体大小；字体格式；
+                    ctx.textAlign = "left"; //对其方式；还有其他对其方式；
+                    ctx.fillStyle = "#ffffff"; //颜色
+                    ctx.fillText(picturetime, 60, 100); //第一个参数为内容；后两个为x,y坐标；以图片右上角为起点0，0；偏移多少而已；下面相同
+                    var base64code = cav.toDataURL(pictureurl).replace("data:image/png;base64,", "");;
+                    var trans = api.require('trans');
+                    //console.log(base64code);
+                    var imageFilter = api.require('imageFilter');
+                    trans.saveImage({
+                        base64Str: base64code,
+                        album: true,
+                        imgPath: "fs://img/",
+                        imgName: timestamp + ".png"
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            // UILoading.closeFlower({
+                            //      id: id++                                  //关闭id 号对应加载提示框
+                            // });
+                            alert("图片存储成功!");
+                            api.hideProgress();
+                            var information = project_json;
+                            api.ajax({
+                                url: $api.getStorage('connectUrl') + '/Maintenancer/TaskMaintenancerPhoto',
+                                method: 'post',
+                                data: {
+                                    values: {
+                                        userId: $api.getStorage('userId'),
+                                        task_id: information[index].task_id
+                                    },
+                                    files: {
+                                        file: 'fs://img/' + pictureid + '.png'
+                                    }
+                                }
+                            },function(ret, err){
+                                if (ret.status) {
+                                    alert("您的照片上传成功");
+                                  api.openWin({
+                                      name: 'Test_Task',
+                                      url: 'Test_Task.html',
+                                      pageParam: {
+                                          task_name: information[index].task_name,
+                                          task_id: information[index].task_id,
+                                          task_type: information[index].type,
+                                          maintenanceplan_id:maintenanceplan_id
+                                      }
+                                  });
+                                }
+                                else if(ret.status == false){
+                                  alert(ret.message);
+                                } else {
+                                    alert( JSON.stringify( err ) );
+                                }
+                            });
+                        } else if(ret.status == false){
+                          alert("图片存储失败!");
+                        }else {
+                            alert(JSON.stringify(err));
+                        }
+                    });
+                };
+            } else {
+                alert(JSON.stringify(err));
+            }
+        });
+    };
+
+    function openpicture() {
+        var photoBrowser = api.require('photoBrowser');
+        photoBrowser.open({
+            images: [
+                "fs://img/" + pictureid + ".png"
+            ],
+            bgColor: '#000'
+        }, function(ret, err) {
+            if (ret) {
+                if (ret.eventType == "click") {
+                    photoBrowser.close();
+                }
+            } else {}
+        });
+
+    };
+</script>
+
+</html>

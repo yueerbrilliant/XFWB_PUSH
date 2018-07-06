@@ -1,0 +1,226 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>Hello APP</title>
+    <link rel="stylesheet" type="text/css" href="../css/aui.css" />
+    <link rel="stylesheet" href="css/jquery-editable-select.min.csss">
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+
+        h3 {
+            display: inline-block;
+            color: #009688;
+        }
+
+        .aui-list .aui-list-item {
+            display: block;
+        }
+
+        span {
+            color: #7B7B7B
+        }
+
+        .content {
+            color: #AEAEAE
+        }
+
+        #txt1 {
+            float: right;
+            width: 70%;
+            border-bottom: 1px solid #66afe9;
+            margin-top: -40px;
+            margin-right: 15px;
+        }
+
+        #div_items {
+            position: relative;
+            float: right;
+            height: 200px;
+            width: 70%;
+            border: 1px solid #66afe9;
+            overflow: auto;
+            display: none;
+            margin-right: 15px;
+        }
+
+        .div_item {
+            width: 100%;
+            height: 20px;
+            margin-top: 1px;
+            font-size: 13px;
+            line-height: 20px;
+        }
+    </style>
+</head>
+<body id="body">
+    <header class="aui-bar aui-bar-nav" style="background-color:#00b2b4">
+        <div class="aui-pull-left aui-btn">
+            <span class="aui-iconfont aui-icon-left" onclick="closewwin()"></span>
+        </div>
+        <div class="aui-title">测试任务</div>
+    </header>
+    <div class="" style="margin-top:20px;margin-left:12px;">
+        <label for="" style="width:20%;"><h3>设施名称</h3><p style="display:inline;margin-left:20px" id="facility_name"></p></label>
+    </div>
+    <div class="" style="margin-top:20px;margin-left:12px;">
+        <h3>已记录测试项</h3><span id="storage" style="margin-left:20px"></span>
+    </div>
+    <div id="tab">
+        <ul class="aui-list aui-list-in" id="add">
+            <!-- <li class="aui-list-item">
+                <div class="aui-list-item-inner">
+                    <div class="aui-list-item-title">b.测试火灾报警和故障报警功能</div>
+                </div>
+            </li>
+            <li class="aui-list-item">
+                <div class="aui-list-item-inner">
+                    <div class="aui-list-item-title">c.测试火灾报警和故障报警功能</div>
+                </div>
+            </li> -->
+        </ul>
+    </div>
+</body>
+<script type="text/javascript" src="../script/jquery-1.4.2.min.js"></script>
+<script type="text/javascript" src="../script/api.js"></script>
+<script type="text/javascript" src="../script/jquery-editable-select.min.js"></script>
+</script>
+<script type="text/javascript">
+    var task_id;
+    var task_item_finished;
+    var task;
+    var id = 0;
+    function loadData() {
+        var UILoading = api.require('UILoading');
+        document.getElementById('facility_name').innerHTML = api.pageParam.second_project_name;
+        // alert(api.pageParam.second_project_name);
+        UILoading.flower({
+            center: {
+                x: 160,
+                y: 240
+            },
+            size: 30,
+            fixed: true
+        }, function(ret) {
+            //alert(JSON.stringify(ret));
+        });
+        api.ajax({
+                url: $api.getStorage('connectUrl') + '/Maintenancer/GetTaskMaintenanceContent',
+                method: 'post',
+                data: {
+                    values: {
+                        userName: $api.getStorage('account'),
+                        task_id: api.pageParam.task_id,
+                        second_project_id: api.pageParam.second_project_id
+                    }
+                }
+            },
+            function(ret, err) {
+              // alert(api.pageParam.task_id+',,'+api.pageParam.second_project_id);
+                UILoading.closeFlower({
+                    id: id++ //关闭id 号对应加载提示框
+                });
+                if (ret) {
+                    // var recode = $api.strToJson(ret);
+                    var status = eval(ret).status;
+                    // alert(status);
+                    var project_json = eval(ret);
+                    console.log("testwork10_frm获取到数据是" + status);
+                    var information;
+                    // alert(status);
+                    if (status == "true") {
+                        var mess =project_json.message;
+                        $("#add").html("");
+                        var obj = "";
+                          $("#storage").html("");
+                        for (var i = 0; i < mess.length; i++) {
+                            if (mess[i].maintenance_test_content_state_finished == "已完成") {
+                                $("#storage").append(mess[i].maintenance_test_content_serial + ",");
+                            }
+                            obj = '  <li class="aui-list-item" onclick="click_item(' + mess[i].maintenance_test_content_id + ')"><div class="aui-list-item-inner"><div class="aui-list-item-title" >' +
+                                mess[i].maintenance_test_content_serial + '.' + mess[i].maintenance_test_content_name +
+                                '</div></div><div class="content">' + mess[i].maintenance_test_content_all + '</div></li>';
+                            $("#add").append(obj);
+                        }
+                    } else {
+                        api.toast({
+                            msg: project_json.message,
+                            duration: 2000,
+                            location: 'bottom'
+                        });
+                    }
+                } else {
+                    alert("服务器异常，请稍后重试");
+                }
+            });
+    }
+    apiready = function() {
+            loadData();
+            api.addEventListener({
+                name: 'msg_name'
+            }, function(ret) {
+                if (ret) {
+                    $("#add").html("");
+                    loadData();
+                }
+            });
+            $api.fixStatusBar($api.dom('.aui-bar'));
+            api.setStatusBarStyle({
+                style: 'dark',
+                color: '#6ab494'
+            });
+        }
+        // 弹出列表框
+    $("#txt1").click(function() {
+        $("#div_items").css('display', 'block');
+    });
+    //隐藏列表框
+    function a() {
+        setTimeout(function() {
+            $("#div_items").css('display', 'none');
+        }, 350);
+    }
+    // 文本框输入
+    $("#txt1").bind('input propertychange', function() {
+        $("#div_items").css('display', 'block'); //只要输入就显示列表框
+        $(".div_item").css('display', 'none'); //如果填了，先将所有的选项隐藏
+        for (var i = 0; i < $(".div_item").length; i++) {
+            //模糊匹配，将所有匹配项显示
+            if ($(".div_item").eq(i).text().substr(0, $("#txt1").val().length) == $("#txt1").val()) {
+                $(".div_item").eq(i).css('display', 'block');
+            }
+
+        }
+
+    });
+    // 项点击
+    function click_event() {
+        $(".div_item").click(function() {
+            $("#txt1").val($(this).text());
+        });
+    };
+    var list = document.getElementsByClassName('aui-list-item');
+    function closewwin() {
+        api.closeWin({
+        });
+    }
+    function click_item(v) {
+// alert(v+','+api.pageParam.task_id+','+ api.pageParam.maintenanceplan_id);
+        api.openWin({
+            name: 'executeTestTask_win',
+            url: './executeTestTask_win.html',
+            pageParam: {
+                maintenance_test_content_id: v,
+                task_id: api.pageParam.task_id,
+                maintenanceplan_id: api.pageParam.maintenanceplan_id
+            }
+        });
+
+    }
+</script>
+</html>

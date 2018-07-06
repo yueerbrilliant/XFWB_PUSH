@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0"/>
+      <title>title</title>
+      <link rel="stylesheet" type="text/css" href="../css/api.css"/>
+      <link rel="stylesheet" type="text/css" href="../css/aui.2.0.css"/>
+      <link rel="stylesheet" type="text/css" href="../css/style.css"/>
+      <link rel="stylesheet" type="text/css" href="../css/aui.css"/>
+      <style>
+          body{
+            background-color: #fff;
+          }
+          .searchAction{
+            margin-top: 60px;
+            padding: 6px 15px;
+            display: inline-block;
+            margin-left: 5%;
+            width:20%;
+            text-align:center;
+            border-radius: 10px;
+            color: white;
+            background-color: #00b2b4
+            }
+
+      </style>
+  </head>
+  <body>
+        <!-- <header class="aui-bar aui-bar-nav">
+            <div class="aui-pull-left aui-btn">
+                <span class="aui-iconfont aui-icon-left" onclick="closeWin()"></span>
+            </div>
+            <div class="aui-title">新建日志</div>
+        </header> -->
+
+        <header class="aui-bar aui-bar-nav">
+            <div class="aui-pull-left aui-btn">
+                <span class="aui-iconfont aui-icon-left" onclick="closeWin()"></span>
+            </div>
+            <div class="aui-title">新建日志</div>
+        </header>
+
+        <div style="width:40%;line-height:60px;margin:0 10%;display:inline;font-size:16px">所属项目：</div>
+        <div  id="projectNameID" style="width:40%;display:inline;font-size:16px"  tapmode="hover" onclick="btnChooseProject()">选择项目</div>
+        <img src="../image/down_img.png" style="width:15px;display:inline;float:right;margin-right:40px;margin-top:23px" />
+        <HR width="90%" style="margin:0 auto" color=#d3d3d3 SIZE=3>
+
+          <div style="width:40%;line-height:60px;margin:0 10%;display:inline;font-size:16px">执行时间：</div>
+          <div  id="startID" style="width:40%;display:inline;text-align:center;font-size:16px"  tapmode="hover" onclick="btnStart(this)">选择日期</div>
+          <img src="../image/down_img.png" style="width:15px;display:inline;float:right;margin-right:40px;margin-top:23px" />
+          <HR width="90%" style="margin:0 auto" color=#d3d3d3 SIZE=3>
+
+            <div id="topControlID">
+            <span class="preYear" onclick="fnPrevYear()" >  <<  </span>
+            <span class="preMonth" onclick="fnPrevMonth()" >  <  </span>
+            <span class="currentTime" id="currentTimeID">  2018年6月  </span>
+            <span class="nextMonth" onclick="fnNextMonth()" >  >  </span>
+            <span class="nextYear" onclick="fnNextYear()" >  >>  </span>
+          </div>
+          <div id="bottomControlID">
+            <span class="cancel" onclick="cancel()" >取消</span>
+            <span class="confirm" onclick="confirm()" >确定</span>
+          </div>
+
+          <textarea id="jobContentID" name="txt" clos="50" rows="6" placeholder="点击输入工作内容" style="margin:15px 8% 8%;padding:5px;width:84%; height:25%; border: solid #e8e8e8 1px;border-radius: 10px;" warp="virtual"></textarea>
+          <div style="display:inline" id="editID" ><img src="../image/img.png" style="width:10%;margin-left:15%;display:inline"  onclick="preview()"><img src="../image/arrows_circle_plus.png" style="width:10%;margin-left:5%;display:inline" onclick="add()"></div>
+          <div style="margin:0 2%;display:inline;font-size:16px">添加照片</div>
+
+          <span class="searchAction"  style="color:white;width:80%;margin-left:10%" tapmode="hover" onclick="btnSubmit()">提交</span>
+
+
+
+  </body>
+  <script type="text/javascript" src="../script/api.js"></script>
+  <script type="text/javascript" src="../script/jquery-1.4.2.min.js"></script>
+  <script type="text/javascript" src="script/util.js"></script>
+  <script type="text/javascript">
+      var UICalendar;
+      var dialogBox;
+      var optionDatas=[];
+      var id = 0;
+      var projectNameSpan = document.getElementById('projectNameID');
+      var myDate = new Date();
+      var curYearStr = myDate.getFullYear(); //获取当前年份(4位)
+      var curMonthStr = myDate.getMonth()+1;
+      var topLayout = document.getElementById('topControlID');
+      var startDataSpan = document.getElementById('startID');
+      var currentTimeSpan = document.getElementById('currentTimeID');
+      currentTimeSpan.innerText = curYearStr+"年"+curMonthStr+"月";
+      var currentRet;
+      var bottomLayout = document.getElementById('bottomControlID');
+      topLayout.style.display="none";//隐藏上一个月，下一个月
+      bottomLayout.style.display="none";//隐藏取消和确定按钮那一行
+
+      apiready = function(){
+          UICalendar = api.require('UICalendar');
+          dialogBox = api.require('dialogBox');
+      };
+
+      function  btnChooseProject(){
+        getProjectNameFromServer();
+      }
+
+      function  getProjectNameFromServer(){
+        var UILoading = api.require('UILoading');
+          UILoading.flower({
+              center: {
+                  x: 160,
+                  y: 240
+              },
+              size: 30,
+              fixed: true
+          }, function(ret) {
+            //  alert(JSON.stringify(ret));
+          });
+        api.ajax({
+            url: $api.getStorage('connectUrl')+'/Maintenancer/GetMaintenancePlan',
+            method: 'post',
+            dataType: 'text',
+            data: {
+                values: {
+                    userName: $api.getStorage('account')
+                }
+            }
+        },function(ret, err){
+          var UILoading = api.require('UILoading');
+          UILoading.closeFlower({
+               id: id++                         //关闭id 号对应加载提示框
+          });
+            if (ret) {
+                alert( JSON.stringify( ret ) );
+                var recode = $api.strToJson(ret);
+                var status = recode.status;
+                if (status=="true") {
+                   //alert(ret);
+                   var data_info = recode.plan;
+                   var information = eval(data_info);
+                   optionDatas=[];
+                   for (var i = 0;i<information.length;i++) {
+                       //使用information[i]来获取一个个的json对象
+                      optionDatas.push({
+                        text : information[i].project_name
+                      });
+                   }
+                  var dialogBox = api.require('dialogBox');
+                  dialogBox.scene({
+                      rect: {
+                          w: 260,
+                          h: 410
+                      },
+                      texts: {
+                          title: '所属项目'
+                      },
+                      styles: {
+                          bg: '#fff',
+                          corner: 6,
+                          title: {
+                              bg: '#333',
+                              h: 44,
+                              size: 16,
+                              color: '#7E92DE'
+                          },
+                          sceneImg: {
+                              h: 133,
+                              path: 'widget://image/row.jpg'
+                          },
+                          content: {
+                              color: '#7E92DE',
+                              size: 14
+                          },
+                          cell: {
+                              bg: '#fff',
+                              h: 40,
+                              text: {
+                                  color: '#7E92DE',
+                                  size: 16
+                              }
+                          }
+                      },
+                      optionDatas: optionDatas,
+                      tapClose: true
+                  }, function(ret, err) {
+                      if (ret) {
+                          //alert(optionDatas[ret.index].text);
+                          projectNameSpan.innerText = optionDatas[ret.index].text;
+                          dialogBox.close({
+                              // dialogName: 'alert'
+                          });
+                      } else {
+                          alert(JSON.stringify(err));
+                      }
+                  });
+
+
+            }else {
+              api.toast({
+                  msg: recode.message,
+                  duration: 2000,
+                  location: 'bottom'
+              });
+            }
+          }
+             else {
+                alert( JSON.stringify( err ) );
+            }
+        });
+
+      }
+
+      function preview(){
+        alert("点击了图片预览");
+      }
+
+      function add(){
+        alert("点击了添加图片按钮");
+      }
+
+      function closeWin(){
+        api.closeWin({
+        });
+      }
+      function btnSubmit(){
+        alert("点击了提交按钮");
+        var date = startDataSpan.innerText;
+        var projectName =  projectNameSpan.innerText;
+        var jobContent = $("#jobContentID").val();
+        alert(jobContent);
+        if(projectName=='选择项目'){
+          alert('请选择所属项目');
+        }else if(date=='选择日期'){
+          alert('请选择执行时间');
+        }else if(jobContent==''){
+          alert('请填写工作内容');
+        }else{
+          var dateStr =  date.split("-").join("");
+          api.ajax({
+              url: $api.getStorage('connectUrl')+'/Maintenancer/NewLog',
+              method: 'post',
+              dataType: 'text',
+              data: {
+                  values: {
+                      userId: $api.getStorage('userId'),
+                      project_name:projectName,
+                      create_time:dateStr,
+                      description:jobContent,
+                      attachable_photo:'test.jpg'
+                  }
+              }
+          },function(ret, err){
+              if (ret) {
+                  alert( JSON.stringify( ret ) );
+                  var recode = $api.strToJson(ret);
+                  var status = recode.status;
+                  if (status=="true") {
+                    api.toast({
+                        msg: recode.message,
+                        duration: 2000,
+                        location: 'bottom'
+                    });
+
+                    api.closeWin({
+                    });
+
+                  }else {
+                    api.toast({
+                        msg: recode.message,
+                        duration: 2000,
+                        location: 'bottom'
+                    });
+                  }
+              } else {
+                  alert( JSON.stringify( err ) );
+              }
+          });
+
+        }
+      }
+
+
+
+      function btnStart(data){
+        //alert( data.id );
+          topLayout.style.display="";//显示
+          bottomLayout.style.display="";//显示
+          UICalendar.open({
+              rect: {
+                  x: api.frameWidth*0.07,
+                  y: 220,
+                  w: api.frameWidth*0.86,
+                  h: 240
+              },
+              styles: {
+                  bg: '#fff',
+                  week: {
+                      weekdayColor: '#3b3b3b',
+                      weekendColor: '#a8d400',
+                      size: 12
+                  },
+                  date: {
+                      color: '#3b3b3b',
+                      selectedColor: '#fff',
+                      selectedBg: '#a8d500',
+                      size: 12
+                  },
+                  today: {
+                      color: 'rgb(230,46,37)',
+                      bg: ''
+                  },
+                  specialDate: {
+                      color: '#fff'
+                  }
+              },
+              specialDate: [{
+                  date: '2016-06-30'
+              }],
+              switchMode: 'vertical',
+              fixed: false
+          }, function(ret, err){
+              if( ret ){
+                currentRet = ret;
+                if(!ret.day){
+                  ret.day=1;
+                }
+                if(!ret.month){
+                  ret.month=1;
+                }
+                currentTimeSpan.innerText = ret.year+"年"+ret.month+"月";
+                //var obj = JSON.parse(JSON.stringify( ret ));
+                var month = ret.month;
+                var day = ret.day;
+                if (month < 10)  month = '0' + month;
+                if (day < 10)    day = '0' + day;
+                //var obj = JSON.parse(JSON.stringify( ret ));
+                  startDataSpan.innerText=ret.year+"-"+month+"-"+day;
+              }else{
+                   alert( JSON.stringify( err ) );
+              }
+          });
+      }
+
+      function fnNextMonth(){
+        UICalendar.nextMonth(function(ret, err){
+            if( ret ){
+              currentTimeSpan.innerText = ret.year+"年"+ret.month+"月";
+              if(!ret.day){
+                ret.day=1;
+              }
+              var month = ret.month;
+              var day = ret.day;
+              if (month < 10)  month = '0' + month;
+              if (day < 10)    day = '0' + day;
+                startDataSpan.innerText=ret.year+"-"+month+"-"+day;
+
+            }else{
+                alert( JSON.stringify( err ) );
+            }
+        });
+      }
+
+      function fnPrevMonth(){
+        UICalendar.prevMonth(function(ret, err){
+            if( ret ){
+              currentTimeSpan.innerText = ret.year+"年"+ret.month+"月";
+              if(!ret.day){
+                ret.day=1;
+              }
+              var month = ret.month;
+              var day = ret.day;
+              if (month < 10)  month = '0' + month;
+              if (day < 10)    day = '0' + day;
+                startDataSpan.innerText=ret.year+"-"+month+"-"+day;
+            }else{
+                alert( JSON.stringify( err ) );
+            }
+        });
+      }
+
+      function fnNextYear(){
+        UICalendar.nextYear(function(ret, err){
+            if( ret ){
+              currentTimeSpan.innerText = ret.year+"年"+ret.month+"月";
+              if(!ret.day){
+                ret.day=1;
+              }
+              var month = ret.month;
+              var day = ret.day;
+              if (month < 10)  month = '0' + month;
+              if (day < 10)    day = '0' + day;
+                startDataSpan.innerText=ret.year+"-"+month+"-"+day;
+            }else{
+                alert( JSON.stringify( err ) );
+            }
+        });
+      }
+
+      function fnPrevYear(){
+        UICalendar.prevYear(function(ret, err){
+            if( ret ){
+               currentTimeSpan.innerText = ret.year+"年"+ret.month+"月";
+               if(!ret.day){
+                 ret.day=1;
+               }
+               var month = ret.month;
+               var day = ret.day;
+               if (month < 10)  month = '0' + month;
+               if (day < 10)    day = '0' + day;
+                 startDataSpan.innerText=ret.year+"-"+month+"-"+day;
+            }else{
+                alert( JSON.stringify( err ) );
+            }
+        });
+      }
+
+      function cancel(){
+        topLayout.style.display="none";
+        bottomLayout.style.display="none";
+        UICalendar.close();
+        startDataSpan.innerText="选择日期";
+      }
+
+      function confirm(){
+        topLayout.style.display="none";
+        bottomLayout.style.display="none";
+        UICalendar.close();
+      }
+
+  </script>
+  </html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>端API</title>
+    <link rel="stylesheet" type="text/css" href="../css/api.css" />
+    <link rel="stylesheet" type="text/css" href="../css/style.css" />
+    <link rel="stylesheet" type="text/css" href="../css/aui.css" />
+    <style>
+        body {
+            background: #fff;
+        }
+
+        div {
+            font-size: 16px;
+        }
+
+        .left {
+            display: inline;
+            width: 20%;
+            line-height: 50px;
+            margin: 10px 10% 0 10%;
+        }
+
+        .fill {
+            width: 100%;
+        }
+        /*方框框*/
+
+        .right {
+            /*margin: 0 10% 0 0;*/
+            width: 45%;
+        }
+
+        .border div {
+            font-size: 15px;
+            line-height: 37px;
+        }
+    </style>
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript">
+        var task_id;
+
+        function closewin() {
+            api.closeWin({});
+
+        }
+
+        function submit() {
+          if(pictureid == ""||pictureid == undefined){
+            alert("业主确认照片未提交");
+            return;
+          }
+            api.showProgress({
+                style: 'default',
+                animationType: 'fade',
+                title: '努力加载中...',
+                text: '先喝杯茶...',
+                modal: false
+            });
+
+
+            api.ajax({
+                url: $api.getStorage('connectUrl') + '/Maintenancer/SubmitPlanCreateTask',
+                method: 'post',
+                data: {
+                    values: {
+                        userId: $api.getStorage('userId'),
+                        task_id: task_id
+
+                    },
+                    //maintenanceplan_id需要从上个界面传过来
+                    //  values:{userName: 'ME0100002', first_time: '2000-01-01',second_time:second_time} //键值对
+                    files: {
+                        file: 'fs://img/' + pictureid + '.png'
+                    }
+                }
+            }, function(ret, err) {
+              api.hideProgress();
+                if (ret) {
+                    var project_json = eval(ret);
+                    var status = project_json.status;
+
+                    if (status == "true") {
+                        api.toast({
+                            msg: project_json.message,
+                            duration: 2000,
+                            location: 'bottom'
+                        });
+                        // api.openWin({
+                        //     name: 'Manage_Uncommitted',
+                        //     url: './Manage_Uncommitted.html',
+                        //     reload :true
+                        // });
+                        api.openWin({
+                            name: 'index',
+                            url: '../index.html'
+                        });
+
+                    } else {
+                        // $(this).background=#e0e0e0;
+                        alert("提交失败!");
+                        api.toast({
+                            msg: project_json.message,
+                            duration: 2000,
+                            location: 'bottom'
+                        });
+                    }
+                }
+            });
+
+
+
+        }
+    </script>
+
+</head>
+
+<body>
+    <header class="aui-bar aui-bar-nav" style="background-color:#00b2b4">
+        <div class="aui-pull-left aui-btn">
+            <span class="aui-iconfont aui-icon-left" onclick="closewin()"></span>
+        </div>
+        <div class="aui-title">测试任务</div>
+    </header>
+    <div style="margin-top:20px">
+        <div class="left"><b>任务名称</b></div>
+        <div style="display:inline;width:50%;" id="getname"></div>
+    </div>
+    <hr style="margin:0 auto" color=#d3d3d3 width=90% size=3>
+    <!-- <HR width="90%" style="margin:0 auto" color=#d3d3d3 SIZE=3> -->
+    <div>
+        <b style="margin:-0 10%;line-height:60px">业主确认照片</b>
+        <img style="margin-left:20%;padding:5px 15px;margin-top:20px;display:inline;width:50px;" src="../image/photo.png" onclick="opencamera();" />
+        <img style="margin-left:-5px;padding:5px 15px;margin-top:20px;display:inline;width:50px;" src="../image/Photo.ico" onclick="openpicture();" />
+    </div>
+    <hr style="margin:0 auto;width:90%" color=#d3d3d3 size=3/>
+    <div id="project_list">
+
+    </div>
+    <p id="submit" class=" define-color" style="margin:50px 40px 40px 40px;border-radius:0.2rem;text-align:center;height:1.5rem;color:#000;padding: 0.3rem 0rem;color:white;font-size:16px;" onclick="submit()">提交</p>
+    <canvas id="mycanvas" style="display:none"></canvas>
+</body>
+<script type="text/javascript" src="../script/api.js"></script>
+<script type="text/javascript" src="../script/jquery-1.4.2.min.js"></script>
+<script type="text/javascript">
+    var project_json = "";
+    var id = 0;
+    var final_information = "";
+    var information = "";
+    var maintenanceplan_id = "";
+      var photoBrowser;
+    apiready = function() {
+      photoBrowser = api.require('photoBrowser');
+        maintenanceplan_id = api.pageParam.maintenanceplan_id;
+        task_id = api.pageParam.task_id;
+        //alert(task_id);
+        api.addEventListener({
+            name: 'msg_name'
+        }, function(ret) {
+            if (ret) {
+                $("#project_list").html("");
+                loadData();
+            }
+        });
+        api.addEventListener({
+        　　　　name: 'keyback'
+        　　}, function(ret, err) {
+        　　　　photoBrowser.close();
+        　　});
+        $api.fixStatusBar($api.dom('.aui-bar'));
+        api.setStatusBarStyle({
+            style: 'dark',
+            color: '#6ab494'
+        });
+        //==1代表新建任务页面传过
+        information = "";
+        // information = eval('[' + api.pageParam.array + ']');
+        // final_information = information;
+
+        loadData();
+
+
+    }
+
+    function loadData() {
+        api.showProgress({
+            style: 'default',
+            animationType: 'fade',
+            title: '努力加载中...',
+            text: '先喝杯茶...',
+            modal: false
+        });
+
+        api.ajax({
+            // url: 'http://192.168.0.7:8080/firefighting/App/AppLogin',
+            url: $api.getStorage('connectUrl') + 'Maintenancer/CheckTaskDetail',
+            method: 'post',
+            dataType: 'text', //该参数若不传，则默认为json<div class="aui-tips aui-margin-b-15">2
+            data: {
+                values: {
+                    userName: $api.getStorage('account'),
+                    task_id: api.pageParam.task_id
+                } //键值对
+            }
+        }, function(ret, err) {
+          api.hideProgress();
+            if (ret) {
+                // alert(ret);
+                var project_json = $api.strToJson(ret);
+                var status = project_json.status;
+                // var json_str={"status": "true","task":[{"id":123,"project_name":"中建国际中心","create_time":"2017-06-10 15:21","maintenanceplan_name":"2017年1月份计划","task_type":"测试"},{"id":123,"project_name":"名敦道项目","create_time":"2017-06-10 15:21","maintenanceplan_name":"2017年8月份计划","task_type":"排查"},{"id":123,"project_name":"0916项目测试","create_time":"2017-06-10 15:21","maintenanceplan_name":"2017年11月份计划","task_type":"维修"}]};
+                var json_str = $api.strToJson(ret);
+                var data = eval(json_str);
+                var data_status = data.status;
+                var obj = "";
+                if (data_status == "true") {
+                    // alert("true");
+                    var task_list = eval(data.task_details);
+                    // alert("task_list");
+                    for (var i = 0; i < task_list.length; i++) {
+                        // alert("waicllll"+task_list.length);
+
+                        console.log("if里1--reCode=" + ret);
+                        final_information = task_list;
+                        // alert("if里2");
+                        var information = eval(task_list[i].second_project);
+                        console.log("if里3");
+                        console.log("坎坎坷坷扩扩扩扩扩扩扩" + information);
+                        for (var ii = 0; ii < information.length; ii++) {
+                            // alert("licccllll"+information.length);
+                            obj = '<div class="border"> <div style = "margin-top:10px;" ><div class = "left" > <b> 系统名称 </b></div> <div class = "right" style = "red;display:inline"> ' + task_list[i].first_project_name +
+                                '</div></div><div><div class = "left"> <b> 系统分类 </b></div><div class = "right"style = "display:inline"> ' + api.pageParam.task_type +
+                                ' </div></div><div><div class = "left" > <b> 设施名称 </b></div><div class = "right" style = "display:inline;"> ' + information[ii].second_project_name +
+                                ' </div></div><div class = "fill"                    style = "margin-bottom:5px;padding-right:8%;margin-top:-5px;text-align:right;" > <img src = "../image/edit.png"style = "width:28px;margin-bottom:-8px;display:inline" onclick="doclick(' +
+                                i + ',' + ii + ')" /> <div style = "display:inline" onclick="doclick(' + i + ',' + ii +
+                                ')"> 编辑 </div>  <img src = "../image/delete.png"  style = "width:20px;display:inline;margin-bottom:-6px;margin-left:20px" onclick="ddelete(' + i + ',' + ii +
+                                ')"/> <div style = "display:inline" onclick="ddelete(' + i + ',' + ii + ')"> 删除 </div></div></div>';
+
+                            $("#project_list").append(obj);
+                        }
+
+
+                    }
+                    // final_information = eval(data.unfinished);
+                    // var obj = "";
+                    // $("#project_list").html("");
+                    // for (var i = 0; i < information.length; i++) {
+                    //     //使用information[i]来获取一个个的json对象
+                    //     var temp = eval(information[i].second_project);
+                    //     for (var ii = 0; ii < temp.length; ii++) {
+                    //
+                    //         obj = '<div class="border"> <div style = "margin-top:10px;" ><div class = "left" > <b> 系统名称 </b></div> <div class = "right" style = "red;display:inline"> ' + information[i].first_project_name +
+                    //             '</div></div><div><div class = "left"> <b> 系统分类 </b></div><div class = "right"style = "display:inline"> ' + api.pageParam.task_type +
+                    //             ' </div></div><div><div class = "left" > <b> 设施名称 </b></div><div class = "right" style = "display:inline;"> ' + temp[ii].second_project_name +
+                    //             ' </div></div><div class = "fill"                    style = "margin-bottom:5px;padding-right:8%;margin-top:-5px;text-align:right;" > <img src = "../image/edit.png"style = "width:28px;margin-bottom:-8px;display:inline" onclick="doclick(' +
+                    //             +i + ',' + ii + ')" /> <div style = "display:inline" onclick="doclick(' + i + ',' + ii +
+                    //             ')"> 编辑 </div>  <img src = "../image/delete.png"  style = "width:20px;display:inline;margin-bottom:-6px;margin-left:20px" onclick="ddelete(' + i + ',' + ii +
+                    //             ')"/> <div style = "display:inline" onclick="ddelete(' + i + ',' + ii + ')"> 删除 </div></div></div>';
+                    //
+                    //         $("#project_list").append(obj);
+                    //     }
+                    //
+                    //
+                    // }
+                    // information = eval(data.finished);
+                    // for (var i = 0; i < information.length; i++) {
+                    //     //使用information[i]来获取一个个的json对象
+                    //     temp = eval(information[i].second_project);
+                    //
+                    //     for (var ii = 0; ii < temp.length; ii++) {
+                    //         obj = '<div class="border"> <div style = "margin-top:10px;" ><div class = "left" > <b> 系统名称 </b></div> <div class = "right" style = "red;display:inline"> ' + information[i].first_project_name +
+                    //             '</div></div><div><div class = "left"> <b> 系统分类 </b></div><div class = "right"style = "display:inline"> ' + api.pageParam.task_type +
+                    //             ' </div></div><div><div class = "left" > <b> 设施名称 </b></div><div class = "right" style = "display:inline;"> ' + temp[ii].second_project_name +
+                    //             ' </div></div></div>';
+                    //         $("#project_list").append(obj);
+                    //     }
+                    // }
+                } else {
+                    api.toast({
+                        msg: project_json.message,
+                        duration: 2000,
+                        location: 'bottom'
+                    });
+                }
+            } else {
+                alert("服务器异常，请稍后重试");
+            };
+        });
+        var info = api.pageParam.task_name;
+        $("#getname").html(info);
+        //为传入的DOM元素增加适当的上内边距，避免header与状态栏重叠
+        //设置样式
+        api.setStatusBarStyle({
+            style: 'dark',
+            color: '#6ab494'
+        });
+    }
+    var code_chosed_delete = "";
+
+    function ddelete(x, v) {
+        if (window.confirm('您确定要删除该任务吗？')) {
+            api.showProgress({
+                style: 'default',
+                animationType: 'fade',
+                title: '努力加载中...',
+                text: '先喝杯茶...',
+                modal: false
+            });
+
+            api.ajax({
+                url: $api.getStorage('connectUrl') + '/Maintenancer/DeleteTaskItem',
+                //url:'http://192.168.0.7:8080/firefighting/Maintenancer/CheckPlanDetail',
+                method: 'post',
+                dataType: 'text', //该参数若不传，则默认为json<div class="aui-tips aui-margin-b-15">2
+                data: {
+                    values: {
+                        userId: $api.getStorage('userId'),
+                        task_id: task_id,
+                        second_project_id: eval(final_information[x]).second_project[v].second_project_id
+                    }
+                }
+            }, function(ret, err) {
+              // alert( $api.getStorage('userId')+','+task_id+","+eval(final_information[x]).second_project[v].second_project_id);
+              api.hideProgress();
+
+                if (ret) {
+                    var recode = $api.strToJson(ret);
+                    var status = recode.status;
+
+                    if (status == "true") {
+                        console.log(recode.message);
+                        api.toast({
+                            msg: recode.message,
+                            duration: 2000,
+                            location: 'bottom'
+                        });
+
+                    } else {
+                        api.toast({
+                            msg: recode.message,
+                            duration: 2000,
+                            location: 'bottom'
+                        });
+
+                    }
+
+                } else {
+                    alert("服务器异常，请稍后重试");
+                };
+            });
+
+        } else {}
+    }
+    var second_project_id;
+
+    function doclick(x, v) {
+        //下方是用来解析json的
+        second_project_id = eval(final_information[x]).second_project[v].second_project_id;
+
+
+        api.openWin({
+            name: 'testwork10_frm',
+            url: './testwork10_frm.html',
+            pageParam: {
+                name: 'test',
+                task_type: api.pageParam.task_type,
+                project_name: api.pageParam.project_name,
+                task_name: api.pageParam.task_name,
+                task_id: task_id,
+                second_project_id: second_project_id,
+                task_character: api.pageParam.task_character,
+                second_project_name: eval(final_information[x]).second_project[v].second_project_name,
+                maintenanceplan_id: maintenanceplan_id,
+                info: final_information
+            }
+        });
+
+        // var temp = eval(information[i].second_project);
+    }
+    var pictureurl;
+    var pictureid;
+    var picturetime;
+
+    function opencamera() {
+        api.getPicture({
+            sourceType: 'camera',
+            encodingType: 'jpg',
+            mediaValue: 'pic',
+            destinationType: 'url',
+            allowEdit: true,
+            quality: 10,
+            saveToPhotoAlbum: false
+        }, function(ret, err) {
+            if (ret) {
+              //alert(JSON.stringify(ret));
+              if(ret.data == ""){
+                alert("您取消了拍照");
+              }else{
+                pictureurl = ret.data;
+                var now = new Date();
+                var year = now.getFullYear();
+                var month = now.getMonth() + 1;
+                var day = now.getDate();
+                var hours = now.getHours();
+                var minutes = now.getMinutes();
+                var seconds = now.getSeconds();
+                var tmp1 = now.toLocaleString();
+                var tmp = year + "/" + month + "/" + day + "/" + hours + "/" + minutes + "/" + seconds;
+                var timestamp = Date.parse(new Date());
+                // $api.setStorage('picturetime',tmp1);
+                picturetime = tmp1;
+                // var jsfun = 'picture();';
+                // api.execScript({
+                //     frameName: 'testpicture',
+                //     script: jsfun
+                // });
+                pictureid = timestamp;
+                // $api.setStorage('pictureid',timestamp);
+                api.showProgress({
+                    title: '图片存储中...',
+                    text: '先喝杯茶...',
+                    modal: false
+                });
+                picture(timestamp);
+              }
+
+            } else {
+              alert(JSON.stringify(err));
+            }
+        });
+    };
+
+    function picture(timestamp) {
+        // var pictureurl = $api.getStorage('pictureurl');
+        var imageFilter = api.require('imageFilter');
+        imageFilter.getAttr({
+            path: pictureurl
+        }, function(ret, err) {
+            if (ret.status) {
+                var cav = document.getElementById('mycanvas');
+                cav.width = ret.width; //设置画布宽度
+                cav.height = ret.height;
+                ctx = cav.getContext('2d');
+                var img = new Image();
+                img.src = pictureurl;
+                // var tmp = $api.getStorage('picturetime');
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0); //将新new出的img对象放入；                          // 绘制水印
+                    ctx.font = "oblique small-caps bold 70px Arial"; //设置水印字体大小；字体格式；
+                    ctx.textAlign = "left"; //对其方式；还有其他对其方式；
+                    ctx.fillStyle = "#ffffff"; //颜色
+                    ctx.fillText(picturetime, 60, 100); //第一个参数为内容；后两个为x,y坐标；以图片右上角为起点0，0；偏移多少而已；下面相同
+                    var base64code = cav.toDataURL(pictureurl).replace("data:image/png;base64,", "");;
+                    var trans = api.require('trans');
+                    //console.log(base64code);
+                    var imageFilter = api.require('imageFilter');
+                    trans.saveImage({
+                        base64Str: base64code,
+                        album: true,
+                        imgPath: "fs://img/",
+                        imgName: timestamp + ".png"
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            alert("图片存储成功，可以点击查看了！");
+                            api.hideProgress();
+                        } else {
+                            alert(JSON.stringify(err));
+                        }
+                    });
+                };
+            } else {
+                alert(JSON.stringify(err));
+            }
+        });
+    };
+
+    function openpicture() {
+
+        photoBrowser.open({
+            images: [
+                "fs://img/" + pictureid + ".png"
+            ],
+            bgColor: '#000'
+        }, function(ret, err) {
+            if (ret) {
+                if (ret.eventType == "click") {
+                    photoBrowser.close();
+                }
+            } else {}
+        });
+
+    };
+</script>
+
+</html>

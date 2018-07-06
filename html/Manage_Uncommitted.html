@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+
+
+    <title>端API</title>
+    <link rel="stylesheet" type="text/css" href="../css/api.css" />
+    <link rel="stylesheet" type="text/css" href="../css/style.css" />
+    <link rel="stylesheet" type="text/css" href="../css/aui.css" />
+    <style>
+        body {
+            background: #fff;
+            width: 100%;
+        }
+
+        div {
+            font-size: 16px;
+        }
+
+        .left {
+            display: inline;
+            line-height: 50px;
+            margin: 40px 10%;
+        }
+        /*方框框*/
+
+        .border div {
+            font-size: 15px;
+            line-height: 37px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <header class="aui-bar aui-bar-nav" style="width:100%;background-color:#00B2B4">
+        <div class="aui-pull-left aui-btn" onclick="cclose()">
+            <span class="aui-iconfont aui-icon-left"></span>
+        </div>
+        <div class="aui-title">管理未提交事务</div>
+    </header>
+    <div id="add_place">
+
+    </div>
+</body>
+
+</html>
+<script type="text/javascript" src="../script/api.js"></script>
+<script type="text/javascript" src="../script/jquery-1.4.2.min.js"></script>
+
+<script type="text/javascript">
+    function cclose() {
+        api.closeWin({});
+    }
+    var id = 0;
+    var information = "";
+    var final_information = "";
+    apiready = function() {
+      $api.fixStatusBar( $api.dom('.aui-bar') );
+      api.setStatusBarStyle({
+          style: 'dark',
+          color: '#6ab494'
+      });
+        loadData();
+    }
+
+    function loadData() {
+
+      api.showProgress({
+          style: 'default',
+          animationType: 'fade',
+          title: '努力加载中...',
+          text: '先喝杯茶...',
+          modal: false
+      });
+
+        api.ajax({
+            // url: 'http://192.168.0.7:8080/firefighting/App/AppLogin',
+            url: $api.getStorage('connectUrl') + '/Maintenancer/CheckOnExecuteTask',
+            method: 'post',
+            dataType: 'text', //该参数若不传，则默认为json<div class="aui-tips aui-margin-b-15">2
+            data: {
+                values: {
+                    userName: $api.getStorage('account')
+                } //键值对
+            }
+        }, function(ret, err) {
+
+          api.hideProgress();
+
+            if (ret) {
+                //alert(ret);
+                var recode = $api.strToJson(ret);
+                var status = recode.status;
+                var role = recode.status;
+
+                // var json_str={"status": "true","task":[{"id":123,"project_name":"中建国际中心","create_time":"2017-06-10 15:21","maintenanceplan_name":"2017年1月份计划","task_type":"测试"},{"id":123,"project_name":"名敦道项目","create_time":"2017-06-10 15:21","maintenanceplan_name":"2017年8月份计划","task_type":"排查"},{"id":123,"project_name":"0916项目测试","create_time":"2017-06-10 15:21","maintenanceplan_name":"2017年11月份计划","task_type":"维修"}]};
+                var json_str = $api.strToJson(ret);
+                var data = eval(json_str);
+                var data_status = data.status;
+                var obj = "";
+                if (data_status == "true") {
+
+                    var task = data.task;
+
+
+                    information = eval(task);
+                    final_information = eval(task);
+                    for (var i = 0; i < information.length; i++) {
+                        var object = eval(information[i]);
+
+
+
+                        obj = '<div class="border"><div style="margin-top:10px;width:100%;"><div class="left"><b>系统名称</b></div><div class="right" style="red;display:inline">' + object.project_name +
+                            '</div><div style="display:inline;color:#00b2b4;float:right;margin-right:12%"><b>' + object.task_type +
+                            '</b></div></div><div><div class="left"><b>任务名称</b></div><div class="right" id="name" style="display:inline">' +
+                            object.task_name + '</div></div><div><div class="left"><b>创建时间</b></div><div class="right" style="display:inline;">' + object.create_time +
+                            '</div></div><div style="margin-bottom:5px;margin-left:52%;margin-top:-2px"><img src = "../image/edit.png"style = "width:28px;margin-bottom:-8px;display:inline" onclick="edit(' + i +
+                            ')"/><div style="display:inline;margin-left:4px"  onclick="edit(' + i + ')">编辑</div><img src = "../image/delete.png"  style = "width:20px;display:inline;margin-bottom:-6px;margin-left:20px"  onclick="delette(' +
+                            object.task_id + ')" /><div style="display:inline;margin-left:5px"  onclick="delette(' + object.task_id + ')">删除</div></div></div>';
+
+                        $("#add_place").append(obj);
+
+
+                    }
+                } else {
+                    api.toast({
+                        msg: recode.message,
+                        duration: 2000,
+                        location: 'bottom'
+                    });
+                }
+                var project_info = api.pageParam.info;
+
+
+
+            } else {
+                alert("服务器异常，请稍后重试");
+            };
+        });
+
+    }
+
+    function edit(n) {
+        var object = eval(information[n]);
+
+        api.openWin({
+            name: 'Test_Task',
+            url: './Test_Task.html',
+            pageParam: {
+                task_name: object.task_name,
+                task_id: object.task_id,
+                task_type: object.task_type,
+                maintenanceplan_id:object.maintenanceplan_id
+
+            }
+        });
+    }
+
+    function delette(v) {
+        if (window.confirm('您确定要删除该任务吗？')) {
+            api.showProgress({
+                style: 'default',
+                animationType: 'fade',
+                title: '努力加载中...',
+                text: '先喝杯茶...',
+                modal: false
+            });
+            api.ajax({
+                    url: $api.getStorage('connectUrl') + '/Maintenancer/DeleteTask',
+                    method: 'post',
+                    dataType: 'text', //该参数若不传，则默认为json<div class="aui-tips aui-margin-b-15">2
+                    data: {
+                        values: {
+
+                            userId: $api.getStorage('userId'),
+                            task_id: v
+
+
+                        }
+                    }
+                }, function(ret, err) {
+                    api.hideProgress();
+
+                    if (ret) {
+                        var recode = $api.strToJson(ret);
+                        var status = recode.status;
+                        if (status == "true") {
+                            // $("#getname").html(info);
+                            $("#add_place").html("");
+                            loadData();
+                        } else {
+                            api.toast({
+                                msg: recode.message,
+                                duration: 2000,
+                                location: 'bottom'
+                            });
+                        }
+
+
+                    } else {
+                        alert("服务器异常，请稍后重试");
+                    }
+                }
+
+            );
+        } else {
+            //alert("取消");
+            return false;
+        }
+    }
+</script>
